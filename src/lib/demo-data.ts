@@ -4,13 +4,14 @@ import {
   type PageMeta,
   type PlaceholderPageData,
   type PlaceholderSectionKey,
+  type Prospect,
   type Workstream,
 } from "@/lib/types";
 
 export const navigationItems: NavItem[] = [
   {
     title: "Command Center",
-    href: "/dashboard",
+    href: "/",
     description: "Top-level operating metrics and weekly workstreams.",
   },
   {
@@ -56,20 +57,24 @@ export const navigationItems: NavItem[] = [
 ];
 
 export const pageMeta: Record<string, PageMeta> = {
+  "/": {
+    title: "Command Center",
+    description: "A cross-functional pulse check for the operating system.",
+  },
   "/dashboard": {
     title: "Command Center",
     description: "A cross-functional pulse check for the operating system.",
   },
   "/sales": {
-    title: "Sales",
-    description: "Placeholder workspace for revenue motion and deal flow.",
+    title: "Prospect Intelligence",
+    description: "Sales agent workspace for lead research and pilot fit.",
   },
   "/marketing": {
-    title: "Marketing",
+    title: "Marketing Agent",
     description: "Placeholder workspace for demand generation and messaging.",
   },
   "/funding": {
-    title: "Funding",
+    title: "Funding & R&D",
     description: "Placeholder workspace for fundraising and investor rhythm.",
   },
   "/engineering": {
@@ -77,7 +82,7 @@ export const pageMeta: Record<string, PageMeta> = {
     description: "Placeholder workspace for delivery cadence and platform work.",
   },
   "/evidence": {
-    title: "Evidence",
+    title: "Pilot Evidence",
     description: "Placeholder workspace for proof points and customer signals.",
   },
   "/partnerships": {
@@ -157,6 +162,156 @@ export const deploymentNotes = [
   "Client-side password gate wired to NEXT_PUBLIC_INTERNAL_DASHBOARD_PASSWORD.",
   "Dashboard shell includes desktop sidebar, mobile sheet navigation, and export helpers.",
   "Placeholder workspaces are ready for real module implementation.",
+];
+
+export const demoProspects: Array<
+  Omit<Prospect, "id" | "createdDate" | "updatedDate">
+> = [
+  {
+    companyName: "HP Haulage",
+    website: "https://example.com/hp-haulage",
+    location: "Ontario, Canada",
+    fleetType: "Trucking/Logistics",
+    estimatedFleetSize: "8-12",
+    decisionMaker: "Operations Manager",
+    email: "",
+    phone: "",
+    linkedIn: "",
+    sourceNotes: "Demo prospect seeded for Sales Agent preview.",
+    maintenancePain:
+      "Coordinating repair decisions across a growing regional haulage fleet.",
+    usesEldTelematics: "Yes",
+    pilotFitScore: null,
+    revenueFitScore: null,
+    grantFitScore: null,
+    outreachStatus: "Researched",
+    nextAction: "Review routing footprint and draft founder outreach.",
+    lastContactDate: "",
+    notes: "Demo record only.",
+    firstEmailDraft: "",
+    linkedInConnectDraft: "",
+    linkedInFollowUpDraft: "",
+    phoneScript: "",
+    cta: "Book a free 20-minute discovery call - [calendly link placeholder]",
+    llmPersonalizationPrompt: "",
+    isDemo: true,
+  },
+  {
+    companyName: "Jet Courier Services",
+    website: "https://example.com/jet-courier-services",
+    location: "Ontario, Canada",
+    fleetType: "Courier",
+    estimatedFleetSize: "5-8",
+    decisionMaker: "Fleet Supervisor",
+    email: "",
+    phone: "",
+    linkedIn: "",
+    sourceNotes: "Demo prospect seeded for Sales Agent preview.",
+    maintenancePain:
+      "Limited repair visibility for time-sensitive same-day delivery vans.",
+    usesEldTelematics: "Unknown",
+    pilotFitScore: null,
+    revenueFitScore: null,
+    grantFitScore: null,
+    outreachStatus: "New",
+    nextAction: "Verify dispatch footprint and maintenance reporting workflow.",
+    lastContactDate: "",
+    notes: "Demo record only.",
+    firstEmailDraft: "",
+    linkedInConnectDraft: "",
+    linkedInFollowUpDraft: "",
+    phoneScript: "",
+    cta: "Book a free 20-minute discovery call - [calendly link placeholder]",
+    llmPersonalizationPrompt: "",
+    isDemo: true,
+  },
+  {
+    companyName: "Trisort Transport",
+    website: "https://example.com/trisort-transport",
+    location: "Ontario, Canada",
+    fleetType: "Trucking/Logistics",
+    estimatedFleetSize: "15-20",
+    decisionMaker: "Director of Fleet Operations",
+    email: "",
+    phone: "",
+    linkedIn: "",
+    sourceNotes: "Demo prospect seeded for Sales Agent preview.",
+    maintenancePain:
+      "Repair approvals slow down dispatch commitments on a larger Ontario fleet.",
+    usesEldTelematics: "Yes",
+    pilotFitScore: null,
+    revenueFitScore: null,
+    grantFitScore: null,
+    outreachStatus: "Drafted",
+    nextAction: "Generate personalization prompt for outbound email.",
+    lastContactDate: "",
+    notes: "Demo record only.",
+    firstEmailDraft: "",
+    linkedInConnectDraft: "",
+    linkedInFollowUpDraft: "",
+    phoneScript: "",
+    cta: "Book a free 20-minute discovery call - [calendly link placeholder]",
+    llmPersonalizationPrompt: "",
+    isDemo: true,
+  },
+  {
+    companyName: "Rabbex Logistics",
+    website: "https://example.com/rabbex-logistics",
+    location: "Ontario, Canada",
+    fleetType: "Mixed",
+    estimatedFleetSize: "6-10",
+    decisionMaker: "General Manager",
+    email: "",
+    phone: "",
+    linkedIn: "",
+    sourceNotes: "Demo prospect seeded for Sales Agent preview.",
+    maintenancePain:
+      "Mixed fleet repair visibility is scattered across several vendors.",
+    usesEldTelematics: "Yes",
+    pilotFitScore: null,
+    revenueFitScore: null,
+    grantFitScore: null,
+    outreachStatus: "Approved",
+    nextAction: "Prepare discovery-call talking points.",
+    lastContactDate: "",
+    notes: "Demo record only.",
+    firstEmailDraft: "",
+    linkedInConnectDraft: "",
+    linkedInFollowUpDraft: "",
+    phoneScript: "",
+    cta: "Book a free 20-minute discovery call - [calendly link placeholder]",
+    llmPersonalizationPrompt: "",
+    isDemo: true,
+  },
+  {
+    companyName: "The Fast Guy",
+    website: "https://example.com/the-fast-guy",
+    location: "Ontario, Canada",
+    fleetType: "Courier",
+    estimatedFleetSize: "2-5",
+    decisionMaker: "Owner Operator",
+    email: "",
+    phone: "",
+    linkedIn: "",
+    sourceNotes: "Demo prospect seeded for Sales Agent preview.",
+    maintenancePain:
+      "Small courier team needs faster go or no-go maintenance decisions.",
+    usesEldTelematics: "No",
+    pilotFitScore: null,
+    revenueFitScore: null,
+    grantFitScore: null,
+    outreachStatus: "Nurture",
+    nextAction: "Hold for later-stage outreach after more research.",
+    lastContactDate: "",
+    notes: "Demo record only.",
+    firstEmailDraft: "",
+    linkedInConnectDraft: "",
+    linkedInFollowUpDraft: "",
+    phoneScript: "",
+    cta: "Book a free 20-minute discovery call - [calendly link placeholder]",
+    llmPersonalizationPrompt: "",
+    isDemo: true,
+  },
 ];
 
 export const placeholderPages: Record<
@@ -285,5 +440,5 @@ export const placeholderPages: Record<
 };
 
 export function getPageMeta(pathname: string): PageMeta {
-  return pageMeta[pathname] ?? pageMeta["/dashboard"];
+  return pageMeta[pathname] ?? pageMeta["/"];
 }

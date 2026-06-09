@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -9,7 +9,6 @@ import {
   DASHBOARD_AUTH_KEY,
   DASHBOARD_LOGIN_PATH,
 } from "@/lib/storage";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 export default function DashboardLayout({
   children,
@@ -17,16 +16,21 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { value: isAuthenticated, isReady } = useLocalStorage(
-    DASHBOARD_AUTH_KEY,
-    false
-  );
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (isReady && !isAuthenticated) {
+    const storedAuth = window.sessionStorage.getItem(DASHBOARD_AUTH_KEY);
+
+    if (storedAuth !== "true") {
       router.replace(DASHBOARD_LOGIN_PATH);
+      setIsReady(true);
+      return;
     }
-  }, [isAuthenticated, isReady, router]);
+
+    setIsAuthenticated(true);
+    setIsReady(true);
+  }, [router]);
 
   if (!isReady || !isAuthenticated) {
     return (
@@ -37,12 +41,14 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="flex min-h-screen">
+    <div className="min-h-screen bg-[#f7f9fb]">
+      <div className="min-h-screen lg:pl-[260px]">
         <Sidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-col">
           <TopBar />
-          <main className="flex-1 p-4 sm:p-6">{children}</main>
+          <main className="mx-auto w-full max-w-[1440px] flex-1 p-4 sm:p-6">
+            {children}
+          </main>
         </div>
       </div>
     </div>
