@@ -28,8 +28,36 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { exportToJSON } from "@/lib/export";
-import { demoProspects } from "@/lib/demo-data";
+import {
+  demoContentItems,
+  demoEngineeringTasks,
+  demoFundingOpportunities,
+  demoInvestorContacts,
+  demoPartnerships,
+  demoPilotEvidence,
+  demoProspects,
+  demoRDEvidenceItems,
+  demoRoadmapItems,
+} from "@/lib/demo-data";
+import { clearDemoContentItems, loadDemoContentItems } from "@/lib/content";
+import {
+  clearDemoEngineeringTasks,
+  loadDemoEngineeringTasks,
+} from "@/lib/engineering";
+import { clearDemoFundingData, loadDemoFundingData } from "@/lib/funding";
+import {
+  clearDemoPilotEvidence,
+  loadDemoPilotEvidence,
+} from "@/lib/pilot-evidence";
+import {
+  clearDemoPartnerships,
+  loadDemoPartnerships,
+} from "@/lib/partnerships";
 import { clearDemoProspects, loadDemoProspects } from "@/lib/prospects";
+import {
+  clearDemoRoadmapItems,
+  loadDemoRoadmapItems,
+} from "@/lib/roadmap";
 import {
   clearAllData,
   exportAllData,
@@ -178,6 +206,16 @@ export default function SettingsPage() {
     };
 
     loadDemoProspects(demoProspects);
+    loadDemoContentItems(demoContentItems);
+    loadDemoFundingData(
+      demoFundingOpportunities,
+      demoRDEvidenceItems,
+      demoInvestorContacts
+    );
+    loadDemoEngineeringTasks(demoEngineeringTasks);
+    loadDemoPilotEvidence(demoPilotEvidence);
+    loadDemoPartnerships(demoPartnerships);
+    loadDemoRoadmapItems(demoRoadmapItems);
     setItem(STORAGE_KEYS.DEMO_MODE, demoMode);
     setIsDemoModeActive(true);
     toast.success("Demo mode loaded.");
@@ -185,6 +223,12 @@ export default function SettingsPage() {
 
   function handleClearDemoData() {
     clearDemoProspects();
+    clearDemoContentItems();
+    clearDemoFundingData();
+    clearDemoEngineeringTasks();
+    clearDemoPilotEvidence();
+    clearDemoPartnerships();
+    clearDemoRoadmapItems();
     removeItem(STORAGE_KEYS.DEMO_MODE);
     setIsDemoModeActive(false);
     toast.success("Demo mode cleared.");

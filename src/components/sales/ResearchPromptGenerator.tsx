@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { copyToClipboard } from "@/lib/export";
-import { importProspects, type ProspectInput } from "@/lib/prospects";
+import { importProspects, type ProspectInput } from "@/lib/data/prospects";
 
 type ResearchPromptGeneratorProps = {
   onImported: () => void;
@@ -134,8 +134,8 @@ export function ResearchPromptGenerator({
     }
   }
 
-  function handleAddAll() {
-    const { imported, skipped } = importProspects(
+  async function handleAddAll() {
+    const { imported, skipped } = await importProspects(
       previewRows.map((row) => ({
         companyName: row.companyName || "",
         website: row.website,

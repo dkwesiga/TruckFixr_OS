@@ -3,13 +3,16 @@ export const DASHBOARD_HOME_PATH = "/";
 export const DASHBOARD_LOGIN_PATH = "/login";
 
 export const STORAGE_KEYS = {
+  DASHBOARD_WEEKLY_PANEL: "tf_os_dashboard_weekly_panel",
   SETTINGS: "tf_os_settings",
   PROSPECTS: "tf_os_prospects",
   CONTENT_ITEMS: "tf_os_content",
+  MARKETING_WEEKLY_PLAN: "tf_os_marketing_weekly_plan",
   FUNDING_OPPORTUNITIES: "tf_os_funding",
   RD_EVIDENCE: "tf_os_rd_evidence",
   INVESTORS: "tf_os_investors",
   ENGINEERING_TASKS: "tf_os_engineering",
+  ENGINEERING_SPRINT_PLAN: "tf_os_engineering_sprint_plan",
   ROADMAP_ITEMS: "tf_os_roadmap",
   PILOT_EVIDENCE: "tf_os_pilot_evidence",
   PARTNERSHIPS: "tf_os_partnerships",
@@ -26,6 +29,18 @@ type ExportSnapshot = {
 
 function canUseLocalStorage() {
   return typeof window !== "undefined" && "localStorage" in window;
+}
+
+function notifyStorageChange(key: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent("tf_os_storage_change", {
+      detail: { key },
+    })
+  );
 }
 
 export function getItem<T>(key: string): T | null {
@@ -52,6 +67,7 @@ export function setItem<T>(key: string, value: T): void {
   }
 
   window.localStorage.setItem(key, JSON.stringify(value));
+  notifyStorageChange(key);
 }
 
 export function removeItem(key: string): void {
@@ -60,6 +76,7 @@ export function removeItem(key: string): void {
   }
 
   window.localStorage.removeItem(key);
+  notifyStorageChange(key);
 }
 
 export function exportAllData(): ExportSnapshot {

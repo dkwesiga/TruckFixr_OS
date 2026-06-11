@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { copyToClipboard } from "@/lib/export";
-import { updateProspect } from "@/lib/prospects";
+import { updateProspect } from "@/lib/data/prospects";
 import {
   generateLLMPersonalizationPrompt,
   generateOutreachTemplates,
@@ -74,12 +74,12 @@ export function ProspectDrafts({
     toast.error("Clipboard copy failed.");
   }
 
-  function handleSaveDraft() {
+  async function handleSaveDraft() {
     if (!editingKey) {
       return;
     }
 
-    updateProspect(prospect.id, {
+    await updateProspect(prospect.id, {
       [editingKey]: draftValue,
     });
     setEditingKey(null);
@@ -88,7 +88,7 @@ export function ProspectDrafts({
     toast.success("Draft saved.");
   }
 
-  function handleRegenerate(key: DraftFieldKey, outputType: "email" | "linkedin" | "phone") {
+  async function handleRegenerate(key: DraftFieldKey, outputType: "email" | "linkedin" | "phone") {
     const confirmed = window.confirm(
       "Regenerate this draft? Any manual edits to this field will be overwritten."
     );
@@ -104,7 +104,7 @@ export function ProspectDrafts({
       outputType
     );
 
-    updateProspect(prospect.id, {
+    await updateProspect(prospect.id, {
       [key]: templates[key],
       llmPersonalizationPrompt,
     });
@@ -118,7 +118,7 @@ export function ProspectDrafts({
       settings,
       outputType
     );
-    updateProspect(prospect.id, { llmPersonalizationPrompt: prompt });
+    await updateProspect(prospect.id, { llmPersonalizationPrompt: prompt });
     onUpdated();
 
     const didCopy = await copyToClipboard(prompt);

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOutIcon, MenuIcon, TruckIcon } from "lucide-react";
@@ -33,7 +34,7 @@ export function MobileNav() {
     <Sheet>
       <SheetTrigger asChild>
         <Button
-          className="size-10 border-[#e0c0b1] bg-white lg:hidden"
+          className="size-11 border-[#e0c0b1] bg-white lg:hidden"
           variant="outline"
           size="icon"
         >
@@ -41,14 +42,23 @@ export function MobileNav() {
           <span className="sr-only">Open navigation</span>
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-[300px] border-slate-800 bg-slate-950 p-0 text-white" side="left">
+      <SheetContent className="w-[300px] max-w-[85vw] border-slate-800 bg-slate-950 p-0 text-white" side="left">
         <SheetHeader>
-          <div className="px-6 py-8 text-left">
-            <SheetTitle className="text-2xl font-extrabold text-[#c85b08]">
-              TruckFixr OS
+          <div className="bg-white px-4 py-4 text-left">
+            <SheetTitle asChild>
+              <div>
+                <Image
+                  src="/logo.webp"
+                  alt="TruckFixr Fleet AI"
+                  width={200}
+                  height={100}
+                  className="h-auto w-full"
+                  priority
+                />
+              </div>
             </SheetTitle>
-            <SheetDescription className="mt-1 text-xs font-bold uppercase text-slate-400">
-              Fleet AI Startup
+            <SheetDescription className="sr-only">
+              TruckFixr Fleet AI navigation menu
             </SheetDescription>
           </div>
         </SheetHeader>

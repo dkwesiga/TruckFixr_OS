@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -54,13 +55,15 @@ export function Sidebar() {
 
   return (
     <aside className="fixed left-0 top-0 z-50 hidden h-full w-[260px] flex-col overflow-hidden bg-slate-950 text-white lg:flex">
-      <div className="px-6 py-8">
-        <p className="text-2xl font-extrabold text-[#c85b08]">
-          TruckFixr OS
-        </p>
-        <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
-          Fleet AI Startup
-        </p>
+      <div className="bg-white px-4 py-4">
+        <Image
+          src="/logo.webp"
+          alt="TruckFixr Fleet AI"
+          width={220}
+          height={110}
+          className="h-auto w-full"
+          priority
+        />
       </div>
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
         {sidebarNavItems.map((item) => {

@@ -1,24 +1,123 @@
 "use client";
 
+import Image from "next/image";
 import { type FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  CheckCircle2Icon,
   EyeIcon,
   EyeOffIcon,
   LockIcon,
   LogInIcon,
-  WrenchIcon,
+  MailIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  DASHBOARD_AUTH_KEY,
-  DASHBOARD_HOME_PATH,
-} from "@/lib/storage";
+import { signInWithMagicLink } from "@/lib/supabase/auth";
+import { getDataMode } from "@/lib/supabase/env";
+import { DASHBOARD_AUTH_KEY, DASHBOARD_HOME_PATH } from "@/lib/storage";
 
-export default function LoginPage() {
+// ── Magic-link form (supabase mode) ─────────────────────────────────────────
+
+function MagicLinkForm() {
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setErrorMessage("");
+    try {
+      await signInWithMagicLink(email);
+      setSent(true);
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : "Failed to send magic link.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (sent) {
+    return (
+      <div className="space-y-4 text-center">
+        <CheckCircle2Icon className="mx-auto size-12 text-green-500" />
+        <div>
+          <p className="font-bold text-slate-900">Check your email</p>
+          <p className="mt-1 text-sm text-slate-500">
+            We sent a magic link to <strong>{email}</strong>
+          </p>
+        </div>
+        <button
+          className="text-xs text-slate-400 underline hover:text-slate-600"
+          type="button"
+          onClick={() => {
+            setSent(false);
+            setEmail("");
+          }}
+        >
+          Use a different email
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      <div className="space-y-2">
+        <Label
+          htmlFor="email"
+          className="text-xs font-bold uppercase tracking-wide text-slate-900"
+        >
+          Email address
+        </Label>
+        <div className="relative">
+          <MailIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+          <Input
+            id="email"
+            type="email"
+            required
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@truckfixr.ca"
+            autoComplete="email"
+            className="h-12 rounded-lg border-[#e0c0b1] bg-[#f7f9fb] pl-10 text-slate-950 placeholder:text-slate-400 focus-visible:ring-orange-500"
+          />
+        </div>
+      </div>
+
+      {errorMessage ? (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+          {errorMessage}
+        </p>
+      ) : null}
+
+      <Button
+        className="h-12 w-full rounded-lg bg-orange-500 font-bold text-white shadow-lg shadow-orange-900/20 transition-all hover:bg-[#9d4300] active:scale-[0.98]"
+        disabled={isSubmitting || !email}
+        type="submit"
+      >
+        {isSubmitting ? "Sending…" : "Send Magic Link"}
+        <MailIcon data-icon="inline-end" />
+      </Button>
+
+      <p className="flex items-center justify-center gap-1 text-center text-xs font-semibold leading-relaxed text-slate-400">
+        <LockIcon className="size-3" />
+        Secure sign-in via Supabase Auth
+      </p>
+    </form>
+  );
+}
+
+// ── Password gate (local / demo mode) ────────────────────────────────────────
+
+function PasswordGateForm() {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -38,7 +137,7 @@ export default function LoginPage() {
 
     // SECURITY NOTE: NEXT_PUBLIC_ variables are exposed in the browser bundle.
     // This password gate provides basic access control only.
-    // Upgrade to Supabase Auth before storing real customer or financial data.
+    // Use Supabase Auth mode for real user accounts.
     const expectedPassword =
       process.env.NEXT_PUBLIC_INTERNAL_DASHBOARD_PASSWORD ?? "truckfixr-dev";
 
@@ -53,6 +152,69 @@ export default function LoginPage() {
   }
 
   return (
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      <div className="space-y-2">
+        <Label
+          className="text-xs font-bold uppercase tracking-wide text-slate-900"
+          htmlFor="password"
+        >
+          Access Key
+        </Label>
+        <div className="relative">
+          <Input
+            className="h-12 rounded-lg border-[#e0c0b1] bg-[#f7f9fb] pr-11 text-slate-950 placeholder:text-slate-400 focus-visible:ring-orange-500"
+            id="password"
+            type={isPasswordVisible ? "text" : "password"}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Enter internal password"
+            autoComplete="current-password"
+          />
+          <button
+            aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+            className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center rounded p-1 text-slate-500 transition-colors hover:text-orange-600"
+            type="button"
+            onClick={() => setIsPasswordVisible((current) => !current)}
+          >
+            {isPasswordVisible ? (
+              <EyeOffIcon className="size-5" />
+            ) : (
+              <EyeIcon className="size-5" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {errorMessage ? (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+          {errorMessage}
+        </p>
+      ) : null}
+
+      <Button
+        className="h-12 w-full rounded-lg bg-orange-500 font-bold text-white shadow-lg shadow-orange-900/20 transition-all hover:bg-[#9d4300] active:scale-[0.98]"
+        disabled={isSubmitting}
+        type="submit"
+      >
+        Login
+        <LogInIcon data-icon="inline-end" />
+      </Button>
+
+      <p className="flex items-center justify-center gap-1 text-center text-xs font-semibold leading-relaxed text-slate-400">
+        <LockIcon className="size-3" />
+        Basic internal protection only. Not suitable for production use with
+        sensitive data.
+      </p>
+    </form>
+  );
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
+
+export default function LoginPage() {
+  const isSupabaseMode = getDataMode() === "supabase";
+
+  return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-4 py-10 text-slate-100">
       <div className="pointer-events-none absolute inset-0 opacity-20">
         <div className="absolute -left-24 -top-24 size-96 rounded-full bg-orange-500 blur-3xl" />
@@ -62,73 +224,20 @@ export default function LoginPage() {
       <section className="relative z-10 w-full max-w-[440px]">
         <div className="overflow-hidden rounded-xl bg-white px-8 py-12 text-slate-950 shadow-2xl shadow-black/30 sm:px-12">
           <div className="mb-8 text-center">
-            <div className="mb-3 flex items-center justify-center gap-3">
-              <WrenchIcon className="size-8 text-[#9d4300]" />
-              <h1 className="text-3xl font-bold leading-10">
-                TruckFixr AI <span className="text-orange-500">OS</span>
-              </h1>
-            </div>
-            <p className="text-sm text-slate-500">
+            <Image
+              src="/logo.webp"
+              alt="TruckFixr Fleet AI"
+              width={200}
+              height={100}
+              className="mx-auto h-auto w-48"
+              priority
+            />
+            <p className="mt-3 text-sm text-slate-500">
               Internal operating system for TruckFixr Fleet AI
             </p>
           </div>
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <Label
-                className="text-xs font-bold uppercase tracking-wide text-slate-900"
-                htmlFor="password"
-              >
-                Access Key
-              </Label>
-              <div className="relative">
-                <Input
-                  className="h-12 rounded-lg border-[#e0c0b1] bg-[#f7f9fb] pr-11 text-slate-950 placeholder:text-slate-400 focus-visible:ring-orange-500"
-                  id="password"
-                  type={isPasswordVisible ? "text" : "password"}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Enter internal password"
-                  autoComplete="current-password"
-                />
-                <button
-                  aria-label={
-                    isPasswordVisible ? "Hide password" : "Show password"
-                  }
-                  className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center rounded p-1 text-slate-500 transition-colors hover:text-orange-600"
-                  type="button"
-                  onClick={() => setIsPasswordVisible((current) => !current)}
-                >
-                  {isPasswordVisible ? (
-                    <EyeOffIcon className="size-5" />
-                  ) : (
-                    <EyeIcon className="size-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {errorMessage ? (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
-                {errorMessage}
-              </p>
-            ) : null}
-
-            <Button
-              className="h-12 w-full rounded-lg bg-orange-500 font-bold text-white shadow-lg shadow-orange-900/20 transition-all hover:bg-[#9d4300] active:scale-[0.98]"
-              disabled={isSubmitting}
-              type="submit"
-            >
-              Login
-              <LogInIcon data-icon="inline-end" />
-            </Button>
-
-            <p className="flex items-center justify-center gap-1 text-center text-xs font-semibold leading-relaxed text-slate-400">
-              <LockIcon className="size-3" />
-              Basic internal protection only. Not suitable for production use
-              with sensitive data.
-            </p>
-          </form>
+          {isSupabaseMode ? <MagicLinkForm /> : <PasswordGateForm />}
 
           <div className="mt-6 flex flex-col items-center gap-4">
             <div className="h-px w-16 bg-slate-200" />

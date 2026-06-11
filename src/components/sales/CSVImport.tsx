@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { importProspects, type ProspectInput } from "@/lib/prospects";
+import { importProspects, type ProspectInput } from "@/lib/data/prospects";
 
 type CSVImportProps = {
   onImported: () => void;
@@ -192,14 +192,21 @@ export function CSVImport({ onImported }: CSVImportProps) {
       });
   }
 
-  function handleImport() {
-    const { imported, skipped } = importProspects(
-      parsedRows.map((row) => mapRowToProspect(row))
-    );
+  async function handleImport() {
+    try {
+      const { imported, skipped } = await importProspects(
+        parsedRows.map((row) => mapRowToProspect(row))
+      );
 
-    setSummary(`${imported} imported, ${skipped} skipped`);
-    onImported();
-    toast.success(`${imported} imported, ${skipped} skipped`);
+      setSummary(`${imported} imported, ${skipped} skipped`);
+      onImported();
+      toast.success(`${imported} imported, ${skipped} skipped`);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Import failed.";
+      setSummary(message);
+      toast.error(message);
+    }
   }
 
   return (

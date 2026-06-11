@@ -32,6 +32,9 @@ yarn-error.log*
 dev.log
 dev.err.log
 dev-*.log
+devserver.*.log
+devsrv.log
+devsrv.err.log
 
 # env files (can opt-in for committing if needed)
 .env*

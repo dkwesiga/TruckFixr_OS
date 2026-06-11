@@ -1,7 +1,9 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ArrowRightIcon,
+  CheckCircle2Icon,
   CopyIcon,
   DownloadIcon,
   FileOutputIcon,
@@ -9,8 +11,11 @@ import {
   PlusIcon,
   SearchIcon,
   SparklesIcon,
+  StarIcon,
+  ThumbsDownIcon,
   Trash2Icon,
   UploadIcon,
+  XCircleIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,6 +26,7 @@ import {
   type ProspectFormValues,
 } from "@/components/sales/ProspectForm";
 import { ResearchPromptGenerator } from "@/components/sales/ResearchPromptGenerator";
+import { SalesAgentWorkspace } from "@/components/sales/SalesAgentWorkspace";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -47,17 +53,20 @@ import {
   exportToMarkdown,
 } from "@/lib/export";
 import { generateOutreachTemplates } from "@/lib/outreach-templates";
+import { applyStageTransition } from "@/lib/sales-workflow";
 import {
-  addProspect,
-  deleteProspect,
-  getProspects,
+  createProspect,
+  listProspects,
+  removeProspect,
   updateProspect,
-} from "@/lib/prospects";
+} from "@/lib/data/prospects";
+import { getDataMode, getDataModeConfigError } from "@/lib/supabase/env";
 import { getItem, STORAGE_KEYS } from "@/lib/storage";
 import {
   type CompanySettings,
   type OutreachStatus,
   type Prospect,
+  type SalesPipelineStage,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -118,6 +127,45 @@ const fleetTypes = [
 const scoreOptions = ["1", "2", "3", "4", "5"] as const;
 
 type ScoreFilter = "" | "1" | "2" | "3" | "4" | "5";
+
+// Ordered pipeline stages (New → Won). Nurture and Lost are off-ramp only.
+const PIPELINE_STAGES: OutreachStatus[] = [
+  "New",
+  "Researched",
+  "Drafted",
+  "Approved",
+  "Sent",
+  "Replied",
+  "Discovery Booked",
+  "Pilot Fit",
+  "Proposal Sent",
+  "Won",
+];
+
+function getNextStage(status: OutreachStatus): OutreachStatus | null {
+  const idx = PIPELINE_STAGES.indexOf(status);
+  if (idx === -1 || idx >= PIPELINE_STAGES.length - 1) return null;
+  return PIPELINE_STAGES[idx + 1];
+}
+
+function getPrevStage(status: OutreachStatus): OutreachStatus | null {
+  const idx = PIPELINE_STAGES.indexOf(status);
+  if (idx <= 0) return null;
+  return PIPELINE_STAGES[idx - 1];
+}
+
+const STAGE_STEP_COLORS: Partial<Record<OutreachStatus, string>> = {
+  New: "bg-slate-100 text-slate-600 border-slate-200",
+  Researched: "bg-blue-50 text-blue-700 border-blue-200",
+  Drafted: "bg-yellow-50 text-yellow-800 border-yellow-200",
+  Approved: "bg-purple-50 text-purple-700 border-purple-200",
+  Sent: "bg-orange-50 text-orange-700 border-orange-200",
+  Replied: "bg-teal-50 text-teal-700 border-teal-200",
+  "Discovery Booked": "bg-green-50 text-green-700 border-green-200",
+  "Pilot Fit": "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Proposal Sent": "bg-indigo-50 text-indigo-700 border-indigo-200",
+  Won: "bg-green-100 text-green-800 border-green-300",
+};
 
 type ProspectFilters = {
   search: string;
@@ -216,15 +264,33 @@ export default function SalesPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [filters, setFilters] = useState<ProspectFilters>(emptyFilters);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isScoringFocus, setIsScoringFocus] = useState(false);
   const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
   const [isResearchOpen, setIsResearchOpen] = useState(false);
   const [editingProspect, setEditingProspect] = useState<Prospect | null>(null);
   const [deletingProspect, setDeletingProspect] = useState<Prospect | null>(null);
   const [draftProspect, setDraftProspect] = useState<Prospect | null>(null);
+  const [dataError, setDataError] = useState<string | null>(null);
   const deferredSearch = useDeferredValue(filters.search);
+  const dataMode = getDataMode();
 
   useEffect(() => {
-    setProspects(getProspects());
+    const configError = getDataModeConfigError();
+    if (configError) {
+      setDataError(configError);
+      return;
+    }
+
+    listProspects()
+      .then((loaded) => {
+        setProspects(loaded);
+        setDataError(null);
+      })
+      .catch((error: unknown) => {
+        setDataError(
+          error instanceof Error ? error.message : "Failed to load prospects."
+        );
+      });
   }, []);
 
   const selectedProspects = useMemo(
@@ -287,43 +353,134 @@ export default function SalesPage() {
     [prospects]
   );
 
-  function refreshProspects() {
-    const nextProspects = getProspects();
-    setProspects(nextProspects);
+  async function refreshProspects() {
+    try {
+      const nextProspects = await listProspects();
+      setProspects(nextProspects);
+      setDataError(null);
 
-    if (draftProspect) {
-      const refreshedDraftProspect =
-        nextProspects.find((prospect) => prospect.id === draftProspect.id) ?? null;
-      setDraftProspect(refreshedDraftProspect);
+      if (draftProspect) {
+        const refreshedDraftProspect =
+          nextProspects.find((prospect) => prospect.id === draftProspect.id) ??
+          null;
+        setDraftProspect(refreshedDraftProspect);
+      }
+    } catch (error) {
+      setDataError(
+        error instanceof Error ? error.message : "Failed to load prospects."
+      );
     }
   }
 
-  function handleSave(values: ProspectFormValues) {
-    if (editingProspect) {
-      updateProspect(editingProspect.id, values);
-    } else {
-      addProspect(values);
-    }
+  const handleSetStage = useCallback(
+    async (prospect: Prospect, newStatus: OutreachStatus) => {
+      try {
+        await updateProspect(prospect.id, {
+          outreachStatus: newStatus,
+          lastContactDate: new Date().toISOString().slice(0, 10),
+        });
+        await refreshProspects();
+        toast.success(`${prospect.companyName} → ${newStatus}`);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to update stage."
+        );
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
-    refreshProspects();
+  const handleSetPipelineStage = useCallback(
+    async (prospect: Prospect, newStage: SalesPipelineStage) => {
+      try {
+        await updateProspect(prospect.id, applyStageTransition(prospect, newStage));
+        await refreshProspects();
+        toast.success(`${prospect.companyName} moved to ${newStage}`);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to update stage."
+        );
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  const handleUpdateProspectWorkflow = useCallback(
+    async (prospect: Prospect, updates: Partial<Prospect>) => {
+      try {
+        await updateProspect(prospect.id, updates);
+        await refreshProspects();
+        toast.success(`${prospect.companyName} updated.`);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to update prospect."
+        );
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  function openEditForm(prospect: Prospect | null, scoringMode = false) {
+    setEditingProspect(prospect);
+    setIsScoringFocus(scoringMode);
+    setIsFormOpen(true);
+  }
+
+  function closeEditForm() {
     setIsFormOpen(false);
     setEditingProspect(null);
+    setIsScoringFocus(false);
   }
 
-  function handleOpenDrafts(prospect: Prospect) {
-    const settings = getStoredSettings();
-    updateProspect(prospect.id, ensureDraftFields(prospect, settings));
-    refreshProspects();
-    const refreshedProspect =
-      getProspects().find((item) => item.id === prospect.id) ?? prospect;
-    setDraftProspect(refreshedProspect);
+  async function handleSave(values: ProspectFormValues) {
+    try {
+      if (editingProspect) {
+        await updateProspect(editingProspect.id, values);
+      } else {
+        await createProspect(values);
+      }
+
+      await refreshProspects();
+      closeEditForm();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save prospect."
+      );
+    }
+  }
+
+  async function handleOpenDrafts(prospect: Prospect) {
+    try {
+      const settings = getStoredSettings();
+      const updated = await updateProspect(
+        prospect.id,
+        ensureDraftFields(prospect, settings)
+      );
+      await refreshProspects();
+      setDraftProspect(updated ?? prospect);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to generate drafts."
+      );
+    }
   }
 
   async function handleCopyEmail(prospect: Prospect) {
     const settings = getStoredSettings();
     const drafts = ensureDraftFields(prospect, settings);
-    updateProspect(prospect.id, drafts);
-    refreshProspects();
+
+    try {
+      await updateProspect(prospect.id, drafts);
+      await refreshProspects();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save draft."
+      );
+      return;
+    }
 
     const didCopy = await copyToClipboard(drafts.firstEmailDraft);
 
@@ -361,18 +518,26 @@ export default function SalesPage() {
     toast.success("Selected prospects exported as markdown.");
   }
 
-  function handleDeleteConfirmed() {
+  async function handleDeleteConfirmed() {
     if (!deletingProspect) {
       return;
     }
 
-    deleteProspect(deletingProspect.id);
-    setSelectedIds((currentIds) =>
-      currentIds.filter((id) => id !== deletingProspect.id)
-    );
-    refreshProspects();
-    setDeletingProspect(null);
-    toast.success("Prospect deleted.");
+    try {
+      await removeProspect(deletingProspect.id);
+      setSelectedIds((currentIds) =>
+        currentIds.filter((id) => id !== deletingProspect.id)
+      );
+      await refreshProspects();
+      setDeletingProspect(null);
+      toast.success(
+        dataMode === "supabase" ? "Prospect archived." : "Prospect deleted."
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete prospect."
+      );
+    }
   }
 
   function handleExportCSV() {
@@ -408,6 +573,37 @@ export default function SalesPage() {
 
   return (
     <div className="space-y-6">
+      {dataMode === "demo" && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
+          Investor Demo Mode — Fictional Data. No real customer, prospect, or
+          partner information is shown.
+        </div>
+      )}
+
+      {dataError && (
+        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+          <p className="font-bold">Data connection problem</p>
+          <p className="mt-1">{dataError}</p>
+        </div>
+      )}
+
+      {dataMode === "supabase" && !dataError && (
+        <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-800">
+          Connected to Supabase — Sales/Prospects data is stored in the cloud.
+        </div>
+      )}
+
+      <SalesAgentWorkspace
+        prospects={prospects}
+        onEditProspect={openEditForm}
+        onExportWeeklyReview={(content) => {
+          exportToMarkdown(content, "truckfixr-weekly-sales-review.md");
+          toast.success("Weekly sales review exported.");
+        }}
+        onSetStage={handleSetPipelineStage}
+        onUpdateProspect={handleUpdateProspectWorkflow}
+      />
+
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {kpiCards.map((card) => (
           <article
@@ -535,10 +731,7 @@ export default function SalesPage() {
           <div className="flex flex-wrap gap-3">
             <Button
               className="bg-[#9d4300] text-white hover:bg-orange-600"
-              onClick={() => {
-                setEditingProspect(null);
-                setIsFormOpen(true);
-              }}
+              onClick={() => openEditForm(null)}
             >
               <PlusIcon data-icon="inline-start" />
               Add Prospect
@@ -547,9 +740,12 @@ export default function SalesPage() {
               <UploadIcon data-icon="inline-start" />
               Import CSV
             </Button>
-            <Button variant="outline" onClick={() => setIsResearchOpen(true)}>
-              <SearchIcon data-icon="inline-start" />
-              Research Prompt
+            <Button
+              className="border-2 border-[#0d1e3d] bg-[#0d1e3d] text-white hover:bg-[#1a2f5a]"
+              onClick={() => setIsResearchOpen(true)}
+            >
+              <SparklesIcon data-icon="inline-start" />
+              Generate Prospects
             </Button>
             <Button variant="outline" onClick={handleExportCSV}>
               <DownloadIcon data-icon="inline-start" />
@@ -630,14 +826,84 @@ export default function SalesPage() {
                       {formatOptional(prospect.decisionMaker)}
                     </td>
                     <td className="px-6 py-5">
-                      <span
-                        className={cn(
-                          "rounded-full px-4 py-2 text-sm font-semibold",
-                          statusClasses[prospect.outreachStatus]
+                      <div className="flex flex-col gap-2">
+                        {/* Current stage badge */}
+                        <span
+                          className={cn(
+                            "inline-block rounded-full px-3 py-1 text-sm font-semibold",
+                            statusClasses[prospect.outreachStatus]
+                          )}
+                        >
+                          {prospect.outreachStatus}
+                        </span>
+                        {/* Pipeline stage step indicator */}
+                        {PIPELINE_STAGES.includes(prospect.outreachStatus) && (
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            Step {PIPELINE_STAGES.indexOf(prospect.outreachStatus) + 1} / {PIPELINE_STAGES.length}
+                          </p>
                         )}
-                      >
-                        {prospect.outreachStatus}
-                      </span>
+                        {/* Advance / back controls */}
+                        <div className="flex flex-wrap gap-1">
+                          {getPrevStage(prospect.outreachStatus) && (
+                            <button
+                              type="button"
+                              title={`← ${getPrevStage(prospect.outreachStatus)}`}
+                              className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-100"
+                              onClick={() => handleSetStage(prospect, getPrevStage(prospect.outreachStatus)!)}
+                            >
+                              ← Back
+                            </button>
+                          )}
+                          {getNextStage(prospect.outreachStatus) && (
+                            <button
+                              type="button"
+                              title={`→ ${getNextStage(prospect.outreachStatus)}`}
+                              className={cn(
+                                "flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] font-bold transition",
+                                STAGE_STEP_COLORS[getNextStage(prospect.outreachStatus)!] ??
+                                  "border-slate-200 bg-slate-50 text-slate-600"
+                              )}
+                              onClick={() => handleSetStage(prospect, getNextStage(prospect.outreachStatus)!)}
+                            >
+                              {getNextStage(prospect.outreachStatus)}
+                              <ArrowRightIcon className="size-3" />
+                            </button>
+                          )}
+                        </div>
+                        {/* Off-ramp quick actions */}
+                        {prospect.outreachStatus !== "Won" &&
+                          prospect.outreachStatus !== "Lost" && (
+                            <div className="flex flex-wrap gap-1">
+                              <button
+                                type="button"
+                                title="Mark as Won"
+                                className="flex items-center gap-1 rounded border border-green-200 bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-700 transition hover:bg-green-100"
+                                onClick={() => handleSetStage(prospect, "Won")}
+                              >
+                                <CheckCircle2Icon className="size-3" />
+                                Won
+                              </button>
+                              <button
+                                type="button"
+                                title="Mark as Nurture"
+                                className="flex items-center gap-1 rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-100"
+                                onClick={() => handleSetStage(prospect, "Nurture")}
+                              >
+                                <ThumbsDownIcon className="size-3" />
+                                Nurture
+                              </button>
+                              <button
+                                type="button"
+                                title="Mark as Lost"
+                                className="flex items-center gap-1 rounded border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600 transition hover:bg-red-100"
+                                onClick={() => handleSetStage(prospect, "Lost")}
+                              >
+                                <XCircleIcon className="size-3" />
+                                Lost
+                              </button>
+                            </div>
+                          )}
+                      </div>
                     </td>
                     <td className="px-6 py-5 text-[#9d4300]">
                       {formatScore(prospect.pilotFitScore)}
@@ -649,26 +915,51 @@ export default function SalesPage() {
                       {formatOptional(prospect.lastContactDate)}
                     </td>
                     <td className="px-6 py-5">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setEditingProspect(prospect);
-                            setIsFormOpen(true);
-                          }}
-                        >
-                          <PencilIcon data-icon="inline-start" />
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenDrafts(prospect)}
-                        >
-                          <SparklesIcon data-icon="inline-start" />
-                          Generate Drafts
-                        </Button>
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {/* Score & Research — shown when unscored */}
+                        {prospect.pilotFitScore === null ? (
+                          <Button
+                            size="sm"
+                            className="border-[#0d1e3d] bg-[#0d1e3d] text-white hover:bg-[#1a2f5a]"
+                            onClick={() => openEditForm(prospect, true)}
+                          >
+                            <StarIcon data-icon="inline-start" />
+                            Score &amp; Research
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditForm(prospect, false)}
+                          >
+                            <PencilIcon data-icon="inline-start" />
+                            Edit
+                          </Button>
+                        )}
+
+                        {/* Generate Drafts — gated on pilotFitScore */}
+                        {prospect.pilotFitScore !== null ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenDrafts(prospect)}
+                          >
+                            <SparklesIcon data-icon="inline-start" />
+                            Generate Drafts
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled
+                            title="Set a Pilot Fit score first"
+                            className="cursor-not-allowed opacity-50"
+                          >
+                            <SparklesIcon data-icon="inline-start" />
+                            Generate Drafts
+                          </Button>
+                        )}
+
                         <Button
                           size="sm"
                           variant="outline"
@@ -683,7 +974,7 @@ export default function SalesPage() {
                           onClick={() => handleExportProspectMarkdown(prospect)}
                         >
                           <FileOutputIcon data-icon="inline-start" />
-                          Export Markdown
+                          Export
                         </Button>
                         <Button
                           className="border-red-200 text-red-700 hover:bg-red-50"
@@ -706,29 +997,27 @@ export default function SalesPage() {
 
       <Dialog
         open={isFormOpen}
-        onOpenChange={(open) => {
-          setIsFormOpen(open);
-          if (!open) {
-            setEditingProspect(null);
-          }
-        }}
+        onOpenChange={(open) => { if (!open) closeEditForm(); }}
       >
         <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>
-              {editingProspect ? "Edit Prospect" : "Add Prospect"}
+              {isScoringFocus
+                ? `Score & Research: ${editingProspect?.companyName ?? ""}`
+                : editingProspect
+                  ? "Edit Prospect"
+                  : "Add Prospect"}
             </DialogTitle>
             <DialogDescription>
-              Score Ontario commercial fleet prospects and prepare outreach for
-              the Sales Agent.
+              {isScoringFocus
+                ? "Set fit scores to unlock draft generation and get a recommended next action."
+                : "Score Ontario commercial fleet prospects and prepare outreach for the Sales Agent."}
             </DialogDescription>
           </DialogHeader>
           <ProspectForm
             prospect={editingProspect}
-            onCancel={() => {
-              setIsFormOpen(false);
-              setEditingProspect(null);
-            }}
+            focusScoring={isScoringFocus}
+            onCancel={closeEditForm}
             onSave={handleSave}
           />
         </DialogContent>
