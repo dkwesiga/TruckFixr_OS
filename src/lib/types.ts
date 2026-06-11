@@ -303,6 +303,27 @@ export interface SalesHandoff {
   updatedAt: string;
 }
 
+export interface SalesActivityLog {
+  id: string;
+  prospectId: string;
+  companyName: string;
+  eventType:
+    | "stage_changed"
+    | "prospect_updated"
+    | "draft_generated"
+    | "draft_marked_sent"
+    | "discovery_completed"
+    | "proposal_updated"
+    | "proposal_decided"
+    | "pilot_health_updated"
+    | "handoff_written"
+    | "handoff_status_changed"
+    | "note";
+  title: string;
+  detail?: string;
+  createdAt: string;
+}
+
 export interface Prospect {
   id: string;
   companyName: string;

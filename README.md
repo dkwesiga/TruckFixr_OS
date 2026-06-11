@@ -35,6 +35,20 @@ npm run dev
 
 Open http://localhost:3000
 
+For a clean local restart after production builds rewrite `.next`:
+
+```bash
+npm run dev:clean
+```
+
+Open http://localhost:3006
+
+Focused Sales Agent verification:
+
+```bash
+npm run verify:sales
+```
+
 ## Environment Variables
 
 | Variable | Description | Default |

@@ -21,9 +21,11 @@ import {
   type SalesCockpitAlert,
 } from "@/lib/sales-activity";
 import {
+  findExistingHandoffWrite,
   markHandoffCompleted,
   writeSalesHandoffToTarget,
 } from "@/lib/sales-handoffs";
+import { getSalesActivityLogs } from "@/lib/sales-activity-log";
 import { type Prospect, type SalesHandoff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -82,12 +84,14 @@ export function SalesFinalPolishPanel({
   const metrics = useMemo(() => getSalesFinalMetrics(prospects), [prospects]);
   const activity = useMemo(() => buildSalesActivityFeed(prospects), [prospects]);
   const alerts = useMemo(() => buildSalesCockpitAlerts(prospects), [prospects]);
+  const persistentLogs = getSalesActivityLogs().slice(0, 12);
   const handoffRows = useMemo(
     () =>
       prospects.flatMap((prospect) =>
         (prospect.handoffs ?? []).map((handoff) => ({
           prospect,
           handoff,
+          existingWrite: findExistingHandoffWrite(handoff),
         }))
       ),
     [prospects]
@@ -271,7 +275,7 @@ export function SalesFinalPolishPanel({
 
           <div className="mt-4 space-y-3">
             {handoffRows.length ? (
-              handoffRows.map(({ prospect, handoff }) => (
+              handoffRows.map(({ prospect, handoff, existingWrite }) => (
                 <article
                   className={cn(
                     "rounded-lg border p-4",
@@ -299,6 +303,12 @@ export function SalesFinalPolishPanel({
                         <p className="mt-2 whitespace-pre-line text-xs leading-5 text-slate-500">
                           {handoff.notes}
                         </p>
+                      ) : null}
+                      {existingWrite ? (
+                        <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-xs font-semibold text-green-800">
+                          Already written to {existingWrite.createdType}:{" "}
+                          {existingWrite.createdId}
+                        </div>
                       ) : null}
                     </div>
 
@@ -328,11 +338,11 @@ export function SalesFinalPolishPanel({
                       </Select>
                       <Button
                         className="min-h-11 bg-[#9d4300] text-white hover:bg-orange-600"
-                        disabled={handoff.status !== "Accepted"}
+                        disabled={handoff.status !== "Accepted" || Boolean(existingWrite)}
                         onClick={() => writeThrough(prospect, handoff)}
                       >
                         <ExternalLinkIcon data-icon="inline-start" />
-                        Write to module
+                        {existingWrite ? "Already written" : "Write to module"}
                       </Button>
                       <Button
                         className="min-h-11"
@@ -354,6 +364,55 @@ export function SalesFinalPolishPanel({
             )}
           </div>
         </article>
+      </section>
+
+      <section className="rounded-xl border border-[#e0c0b1] bg-white p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase text-[#584237]">
+              Persistent Activity Log
+            </p>
+            <h3 className="mt-1 text-lg font-bold text-slate-950">
+              Recorded workflow actions
+            </h3>
+          </div>
+          <p className="text-sm text-slate-600">
+            Stored in local storage and included in JSON backups.
+          </p>
+        </div>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {persistentLogs.length ? (
+            persistentLogs.map((log) => (
+              <button
+                className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 p-3 text-left hover:border-orange-200 hover:bg-orange-50"
+                key={log.id}
+                onClick={() => onSelectProspect(log.prospectId)}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="rounded bg-white px-2 py-1 text-xs font-bold text-slate-700">
+                    {log.eventType.replaceAll("_", " ")}
+                  </span>
+                  <span className="text-xs font-semibold text-slate-500">
+                    {timeAgo(log.createdAt)}
+                  </span>
+                </div>
+                <p className="mt-2 font-bold text-slate-950">{log.companyName}</p>
+                <p className="mt-1 text-sm text-slate-700">{log.title}</p>
+                {log.detail ? (
+                  <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                    {log.detail}
+                  </p>
+                ) : null}
+              </button>
+            ))
+          ) : (
+            <div className="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-600 lg:col-span-2">
+              No persistent Sales activity has been recorded yet. New workflow
+              changes will appear here.
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">

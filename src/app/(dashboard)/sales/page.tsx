@@ -53,6 +53,10 @@ import {
   exportToMarkdown,
 } from "@/lib/export";
 import { generateOutreachTemplates } from "@/lib/outreach-templates";
+import {
+  logProspectWorkflowUpdate,
+  logStageChange,
+} from "@/lib/sales-activity-log";
 import { applyStageTransition } from "@/lib/sales-workflow";
 import {
   createProspect,
@@ -395,6 +399,7 @@ export default function SalesPage() {
     async (prospect: Prospect, newStage: SalesPipelineStage) => {
       try {
         await updateProspect(prospect.id, applyStageTransition(prospect, newStage));
+        logStageChange(prospect, newStage);
         await refreshProspects();
         toast.success(`${prospect.companyName} moved to ${newStage}`);
       } catch (error) {
@@ -411,6 +416,7 @@ export default function SalesPage() {
     async (prospect: Prospect, updates: Partial<Prospect>) => {
       try {
         await updateProspect(prospect.id, updates);
+        logProspectWorkflowUpdate(prospect, updates);
         await refreshProspects();
         toast.success(`${prospect.companyName} updated.`);
       } catch (error) {

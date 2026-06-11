@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "node scripts/clean-next.mjs && next dev -p 3006",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "verify:sales": "node scripts/verify-sales-agent.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",

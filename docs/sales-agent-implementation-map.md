@@ -92,6 +92,12 @@ All new fields are optional so existing localStorage data, demo records, CSV imp
 - `src/lib/sales-activity.ts`
   - Added derived Sales activity feed and final Sales metrics across outreach, proposals, pilots, nurture, consent, and handoffs.
   - Added rule-based cockpit alerts for the highest-leverage daily Sales risks.
+- `src/lib/sales-activity-log.ts`
+  - Added capped persistent localStorage activity logs for meaningful Sales workflow actions.
+- `scripts/verify-sales-agent.mjs`
+  - Added zero-dependency verification checks for scoring, outreach sequences, proposals, pilot health reports, cockpit metrics, alerts, and duplicate-safe handoff write-through.
+- `scripts/clean-next.mjs`
+  - Added generated `.next` cleanup helper for clean local dev restarts.
 - `src/app/(dashboard)/sales/page.tsx`
   - Mounted the new Sales workspace above the existing prospect KPI cards and table.
   - Added manual full-pipeline stage transition handler.
@@ -145,6 +151,7 @@ All new fields are optional so existing localStorage data, demo records, CSV imp
   - Shows final Sales operational metrics: follow-ups due, drafts needing review, consent blocked prospects, pending proposals, active pilots, nurture check-ins due, and accepted handoffs.
   - Shows rule-based founder cockpit alerts so Dickson can see what needs attention before scanning every prospect.
   - Shows a recent activity timeline derived from prospect stage changes, outreach drafts, discovery completion, proposal generation, pilot health, loss/nurture, partner referrals, and handoffs.
+  - Shows persistent recorded workflow actions from local storage.
   - Lets reviewed handoffs be marked Accepted and written into the correct internal module as draft records.
   - Marks written handoffs Completed with the created record id, and links existing records if the same handoff was already written.
 
@@ -169,6 +176,8 @@ All new fields are optional so existing localStorage data, demo records, CSV imp
 - Cross-module handoff write-through is implemented for Marketing, Engineering, Funding/R&D, and Roadmap draft records.
 - Final Sales metrics and a derived activity timeline are implemented in the Handoffs tab.
 - Founder cockpit alerts and duplicate-safe handoff write-through are implemented.
+- Persistent Sales activity logs are implemented for stage changes, workflow updates, outreach draft generation/sent tracking, discovery completion, proposal updates, pilot health updates, and handoff writes.
+- Focused Sales verification runs with `npm run verify:sales`.
 - Supabase metadata round-trip exists for optional workflow fields, but a dedicated normalized schema/migration is still future work.
 - Weekly Sales Review is rule-based and intentionally does not call a live AI provider.
 
@@ -180,10 +189,10 @@ All new fields are optional so existing localStorage data, demo records, CSV imp
 
 ## Recommended Next Phase
 
-Phase 10 should build Sales Agent verification and persistence hardening:
+Phase 11 should build Sales Agent mobile/accessibility QA and normalized persistence:
 
-1. Add focused tests for deterministic generators, handoff write-through, activity metrics, and prospect metadata round-trip behavior.
-2. Add optional persistent activity logs if Supabase mode becomes the default system of record.
-3. Tighten mobile QA for the expanded Sales workspace.
-4. Add keyboard/accessibility QA for the largest Sales forms and cockpit controls.
+1. Tighten mobile QA for the expanded Sales workspace.
+2. Add keyboard/accessibility QA for the largest Sales forms and cockpit controls.
+3. Add optional persistent activity logs in Supabase mode if Supabase becomes the default system of record.
+4. Add duplicate-safe normalized tables for Sales workflow fields once localStorage is no longer the primary persistence layer.
 5. Keep all generated outputs draft-only with no auto-send, auto-post, auto-submit, or auto-commit behavior.
