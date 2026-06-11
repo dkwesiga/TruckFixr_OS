@@ -6,6 +6,7 @@ export const STORAGE_KEYS = {
   DASHBOARD_WEEKLY_PANEL: "tf_os_dashboard_weekly_panel",
   SETTINGS: "tf_os_settings",
   PROSPECTS: "tf_os_prospects",
+  SALES_ACTIVITY_LOGS: "tf_os_sales_activity_logs",
   CONTENT_ITEMS: "tf_os_content",
   MARKETING_WEEKLY_PLAN: "tf_os_marketing_weekly_plan",
   FUNDING_OPPORTUNITIES: "tf_os_funding",
